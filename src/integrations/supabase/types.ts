@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_config: {
+        Row: {
+          code_hash: string
+          id: number
+        }
+        Insert: {
+          code_hash: string
+          id?: number
+        }
+        Update: {
+          code_hash?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      admin_sessions: {
+        Row: {
+          created_at: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          token?: string
+        }
+        Relationships: []
+      }
       game: {
         Row: {
           id: number
@@ -121,7 +151,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      _mafia_after_removal: {
+        Args: { p_byvote: boolean; p_role: string }
+        Returns: undefined
+      }
+      _mafia_bump: { Args: never; Returns: undefined }
+      _mafia_hash: { Args: { t: string }; Returns: string }
+      _mafia_is_admin: { Args: { p_admin: string }; Returns: boolean }
+      mafia_admin: {
+        Args: {
+          p_action: string
+          p_admin: string
+          p_player: string
+          p_value: string
+        }
+        Returns: Json
+      }
+      mafia_admin_unlock: { Args: { p_code: string }; Returns: Json }
+      mafia_join: { Args: { p_name: string; p_token: string }; Returns: Json }
+      mafia_set_admin_code: { Args: { p_code: string }; Returns: undefined }
+      mafia_state: { Args: { p_admin: string; p_token: string }; Returns: Json }
+      mafia_vote: { Args: { p_target: string; p_token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
