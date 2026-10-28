@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { adminAction, adminUnlock, castVote, getState, joinRoom } from "@/lib/game.functions";
+import { api, gameDb, type State } from "@/lib/game-client";
 import { ROLE_INFO, WINNER_TEXT } from "@/lib/roles";
 import { MAX_PLAYERS, MIN_PLAYERS } from "@/lib/game-logic";
 
@@ -20,7 +18,6 @@ export const Route = createFileRoute("/")({
   component: Game,
 });
 
-type State = Awaited<ReturnType<typeof getState>>;
 
 function getToken() {
   let t = localStorage.getItem("mafia_token");
@@ -32,17 +29,13 @@ function getToken() {
 }
 
 function Game() {
-  const fetchState = useServerFn(getState);
-  const join = useServerFn(joinRoom);
-  const vote = useServerFn(castVote);
-  const unlock = useServerFn(adminUnlock);
-  const act = useServerFn(adminAction);
 
   const [token, setToken] = useState<string | null>(null);
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [state, setState] = useState<State | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [err, setErr] = useState("");
+  const [connErr, setConnErr] = useState(false);
   const busy = useRef(false);
 
   useEffect(() => {
@@ -55,27 +48,28 @@ function Game() {
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const s = await fetchState({ data: { token, adminToken } });
+      const s = await api.state(token, adminToken);
       setState(s);
+      setConnErr(false);
       if (adminToken && !s.admin) {
         localStorage.removeItem("mafia_admin");
         setAdminToken(null);
       }
     } catch {
-      /* keep last state; retry on next tick */
+      setConnErr(true);
     }
-  }, [token, adminToken, fetchState]);
+  }, [token, adminToken]);
 
   useEffect(() => {
     if (!token) return;
     refresh();
-    const ch = supabase
+    const ch = gameDb
       .channel(`game-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "game" }, () => refresh())
       .subscribe();
     const iv = setInterval(refresh, 4000);
     return () => {
-      supabase.removeChannel(ch);
+      gameDb.removeChannel(ch);
       clearInterval(iv);
     };
   }, [token, refresh]);
@@ -109,10 +103,11 @@ function Game() {
         ) : (
           <AdminUnlock
             onUnlock={async (code) => {
-              const r = await unlock({ data: { code } });
-              if (r.ok) {
-                localStorage.setItem("mafia_admin", r.adminToken);
-                setAdminToken(r.adminToken);
+              const r = await api.unlock(code);
+              if (r.ok && r.adminToken) {
+                const t = r.adminToken;
+                localStorage.setItem("mafia_admin", t);
+                setAdminToken(t);
                 setShowAdmin(true);
                 return null;
               }
@@ -125,19 +120,19 @@ function Game() {
       {err && <div className="glass px-4 py-3 text-sm text-destructive">{err}</div>}
 
       {!state ? (
-        <div className="glass p-6 text-center text-muted-foreground">Connecting…</div>
+        <div className="glass p-6 text-center text-muted-foreground">{connErr ? "Can't reach the game server. Retrying…" : "Connecting…"}</div>
       ) : admin && showAdmin ? (
-        <AdminDashboard state={state} act={(action, playerId, value) => run(() => act({ data: { adminToken: adminToken!, action, playerId, value } }))} />
+        <AdminDashboard state={state} act={(action, playerId, value) => run(() => api.admin(adminToken!, action, playerId, value))} />
       ) : !me || me.kicked ? (
         me?.kicked ? (
           <div className="glass p-6 text-center">You were removed from this room by the admin.</div>
         ) : admin ? (
           <div className="glass p-6 text-center text-muted-foreground">You're the admin. Open the dashboard to manage the game.</div>
         ) : (
-          <JoinScreen count={state.players.length} onJoin={(name) => run(() => join({ data: { token: token!, name } }))} />
+          <JoinScreen count={state.players.length} onJoin={(name) => run(() => api.join(token!, name))} />
         )
       ) : (
-        <PlayerView state={state} onVote={(targetId) => run(() => vote({ data: { token: token!, targetId } }))} />
+        <PlayerView state={state} onVote={(targetId) => run(() => api.vote(token!, targetId))} />
       )}
     </main>
   );
