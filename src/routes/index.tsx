@@ -123,17 +123,17 @@ function Game() {
       {!state ? (
         <div className="glass p-6 text-center text-muted-foreground">{connErr ? "Can't reach the game server. Retrying…" : "Connecting…"}</div>
       ) : admin && showAdmin ? (
-        <AdminDashboard state={state} act={(action, playerId, value) => { if (adminToken) return run(() => api.admin(adminToken, action, playerId, value)); }} nightAct={(action, targetId) => { if (adminToken) return run(() => api.nightAdmin(adminToken, action, state.night.round, targetId)); }} />
+        <AdminDashboard state={state} act={(action, playerId, value) => adminToken ? run(() => api.admin(adminToken, action, playerId, value)) : undefined} nightAct={(action, targetId) => adminToken ? run(() => api.nightAdmin(adminToken, action, state.night.round, targetId)) : undefined} />
       ) : !me || me.kicked ? (
         me?.kicked ? (
           <div className="glass p-6 text-center">You were removed from this room by the admin.</div>
         ) : admin ? (
           <div className="glass p-6 text-center text-muted-foreground">You're the admin. Open the dashboard to manage the game.</div>
         ) : (
-          <JoinScreen count={state.players.length} onJoin={(name) => { if (token) return run(() => api.join(token, name)); }} />
+          <JoinScreen count={state.players.length} onJoin={(name) => token ? run(() => api.join(token, name)) : undefined} />
         )
       ) : (
-        <PlayerView state={state} onVote={(targetId) => { if (token) return run(() => api.vote(token, targetId)); }} onNight={(targetId) => { if (token) return run(() => api.nightAction(token, targetId, state.night.round)); }} />
+        <PlayerView state={state} onVote={(targetId) => token ? run(() => api.vote(token, targetId)) : undefined} onNight={(targetId) => token ? run(() => api.nightAction(token, targetId, state.night.round)) : undefined} />
       )}
     </main>
   );
