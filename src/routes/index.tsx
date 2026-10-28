@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, gameDb, type State } from "@/lib/game-client";
 import { ROLE_INFO, WINNER_TEXT } from "@/lib/roles";
 import { MAX_PLAYERS, MIN_PLAYERS } from "@/lib/game-logic";
+import { AdminNight, PlayerNight, type NightAct } from "@/components/night-actions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -122,17 +123,17 @@ function Game() {
       {!state ? (
         <div className="glass p-6 text-center text-muted-foreground">{connErr ? "Can't reach the game server. Retrying…" : "Connecting…"}</div>
       ) : admin && showAdmin ? (
-        <AdminDashboard state={state} act={(action, playerId, value) => run(() => api.admin(adminToken!, action, playerId, value))} />
+        <AdminDashboard state={state} act={(action, playerId, value) => { if (adminToken) return run(() => api.admin(adminToken, action, playerId, value)); }} nightAct={(action, targetId) => { if (adminToken) return run(() => api.nightAdmin(adminToken, action, state.night.round, targetId)); }} />
       ) : !me || me.kicked ? (
         me?.kicked ? (
           <div className="glass p-6 text-center">You were removed from this room by the admin.</div>
         ) : admin ? (
           <div className="glass p-6 text-center text-muted-foreground">You're the admin. Open the dashboard to manage the game.</div>
         ) : (
-          <JoinScreen count={state.players.length} onJoin={(name) => run(() => api.join(token!, name))} />
+          <JoinScreen count={state.players.length} onJoin={(name) => { if (token) return run(() => api.join(token, name)); }} />
         )
       ) : (
-        <PlayerView state={state} onVote={(targetId) => run(() => api.vote(token!, targetId))} />
+        <PlayerView state={state} onVote={(targetId) => { if (token) return run(() => api.vote(token, targetId)); }} onNight={(targetId) => { if (token) return run(() => api.nightAction(token, targetId, state.night.round)); }} />
       )}
     </main>
   );
@@ -219,7 +220,7 @@ function PlayerList({ state }: { state: State }) {
   );
 }
 
-function PlayerView({ state, onVote }: { state: State; onVote: (id: string) => void }) {
+function PlayerView({ state, onVote, onNight }: { state: State; onVote: (id: string) => void; onNight: (id: string) => void }) {
   const { game, me } = state;
   const [revealed, setRevealed] = useState(false);
   const [choice, setChoice] = useState<string | null>(null);
@@ -282,6 +283,8 @@ function PlayerView({ state, onVote }: { state: State; onVote: (id: string) => v
 
       {state.lastResult && <VoteResults result={state.lastResult} />}
 
+      <PlayerNight state={state} submit={onNight} />
+
       <section className="glass p-6 text-center">
         {!me.role ? (
           <p className="text-muted-foreground">A game is in progress. You'll join the next one.</p>
@@ -334,9 +337,11 @@ function VoteResults({ result }: { result: NonNullable<State["lastResult"]> }) {
 
 type Act = (action: "start" | "reset" | "startVote" | "endVote" | "eliminate" | "eliminateVoted" | "kick" | "setReveal" | "setMafiaRule", playerId?: string, value?: string) => void;
 
-function AdminDashboard({ state, act }: { state: State; act: Act }) {
-  const a = state.admin!;
+function AdminDashboard({ state, act, nightAct }: { state: State; act: Act; nightAct: NightAct }) {
+  const a = state.admin;
   const { game } = state;
+  if (!a) return null;
+  const nightPending = state.night.status === "open" || state.night.status === "closed";
   const confirmAct = (msg: string, ...args: Parameters<Act>) => {
     if (window.confirm(msg)) act(...args);
   };
@@ -352,7 +357,7 @@ function AdminDashboard({ state, act }: { state: State; act: Act }) {
           </button>
         )}
         {game.phase === "playing" && !game.votingOpen && (
-          <button className="glass-btn glass-btn-primary" onClick={() => act("startVote")}>START VOTE</button>
+          <button className="glass-btn glass-btn-primary" disabled={nightPending} onClick={() => act("startVote")}>START VOTE</button>
         )}
         {game.votingOpen && (
           <button className="glass-btn glass-btn-primary" onClick={() => act("endVote")}>END VOTE</button>
@@ -369,6 +374,8 @@ function AdminDashboard({ state, act }: { state: State; act: Act }) {
       {game.phase === "ended" && game.winner && (
         <section className="glass p-5 text-center text-xl font-semibold">{WINNER_TEXT[game.winner]}</section>
       )}
+
+      <AdminNight state={state} act={nightAct} />
 
       {game.votingOpen && (
         <section className="glass p-5">
@@ -391,7 +398,8 @@ function AdminDashboard({ state, act }: { state: State; act: Act }) {
           {game.phase === "playing" && state.lastResult.top.length === 1 && !state.lastResult.used && (
             <button
               className="glass-btn glass-btn-danger"
-              onClick={() => confirmAct(`Eliminate ${state.lastResult!.top[0]?.name} by vote?`, "eliminateVoted")}
+              disabled={nightPending}
+              onClick={() => confirmAct(`Eliminate ${state.lastResult?.top[0]?.name} by vote?`, "eliminateVoted")}
             >
               Eliminate {state.lastResult.top[0]?.name} (voted out)
             </button>
@@ -433,7 +441,7 @@ function AdminDashboard({ state, act }: { state: State; act: Act }) {
                 <td className="py-2 text-right">
                   <div className="flex justify-end gap-1">
                     {game.phase === "playing" && p.alive && p.role && (
-                      <button className="glass-btn px-3 py-1 text-xs" onClick={() => confirmAct(`Eliminate ${p.name}?`, "eliminate", p.id)}>
+                      <button className="glass-btn px-3 py-1 text-xs" disabled={nightPending} onClick={() => confirmAct(`Eliminate ${p.name}?`, "eliminate", p.id)}>
                         Eliminate
                       </button>
                     )}
