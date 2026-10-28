@@ -47,7 +47,9 @@ function Game() {
 
   useEffect(() => {
     setToken(getToken());
-    setAdminToken(localStorage.getItem("mafia_admin"));
+    const at = localStorage.getItem("mafia_admin");
+    setAdminToken(at);
+    if (at) setShowAdmin(true);
   }, []);
 
   const refresh = useCallback(async () => {
