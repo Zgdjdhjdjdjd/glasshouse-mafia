@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Mafia game architecture
-- All game reads/writes go through server functions in src/lib/game.functions.ts using the service-role client; players/votes tables have RLS with no policies so roles never reach browsers directly.
-- Only the `game` row is publicly readable and in realtime; clients refetch personalized state when its `version` changes (plus a 4s poll fallback).
-- Admin auth is an HMAC of the ADMIN_CODE secret, verified on every admin call; players are identified by a random token in localStorage.
-- Pure rules (role assignment, victory, tally) live in src/lib/game-logic.ts with tests beside it.
+- All game logic lives in SECURITY DEFINER Postgres functions (mafia_state/join/vote/admin_unlock/admin); the browser calls them via src/lib/game-client.ts with the publishable key and the direct backend URL, so the app runs on any host (Vercel) with no server env vars.
+- players/votes/admin tables have RLS with no policies; only the `game` row is publicly readable and in realtime; clients refetch state when it changes (plus a 4s poll).
+- Admin code is stored only as a sha256 hash (set via service-role-only mafia_set_admin_code); unlocking issues a random session token stored hashed in admin_sessions.
+- src/lib/game-logic.ts holds constants and reference rules with tests; the database functions are the source of truth.
