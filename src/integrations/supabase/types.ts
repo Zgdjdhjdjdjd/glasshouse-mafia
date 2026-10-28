@@ -49,6 +49,8 @@ export type Database = {
           id: number
           last_result: Json | null
           mafia_rule: string
+          night_open: boolean
+          night_round: number
           phase: string
           result_used: boolean
           reveal_roles: boolean
@@ -61,6 +63,8 @@ export type Database = {
           id?: number
           last_result?: Json | null
           mafia_rule?: string
+          night_open?: boolean
+          night_round?: number
           phase?: string
           result_used?: boolean
           reveal_roles?: boolean
@@ -73,6 +77,8 @@ export type Database = {
           id?: number
           last_result?: Json | null
           mafia_rule?: string
+          night_open?: boolean
+          night_round?: number
           phase?: string
           result_used?: boolean
           reveal_roles?: boolean
@@ -82,6 +88,81 @@ export type Database = {
           winner?: string | null
         }
         Relationships: []
+      }
+      night_actions: {
+        Row: {
+          player_id: string
+          result: Json | null
+          role: string
+          round: number
+          target_id: string
+        }
+        Insert: {
+          player_id: string
+          result?: Json | null
+          role: string
+          round: number
+          target_id: string
+        }
+        Update: {
+          player_id?: string
+          result?: Json | null
+          role?: string
+          round?: number
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "night_actions_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "night_actions_round_fkey"
+            columns: ["round"]
+            isOneToOne: false
+            referencedRelation: "night_rounds"
+            referencedColumns: ["round"]
+          },
+          {
+            foreignKeyName: "night_actions_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      night_rounds: {
+        Row: {
+          round: number
+          saved: boolean
+          status: string
+          victim_id: string | null
+        }
+        Insert: {
+          round: number
+          saved?: boolean
+          status: string
+          victim_id?: string | null
+        }
+        Update: {
+          round?: number
+          saved?: boolean
+          status?: string
+          victim_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "night_rounds_victim_id_fkey"
+            columns: ["victim_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       players: {
         Row: {
@@ -155,6 +236,19 @@ export type Database = {
         Args: { p_byvote: boolean; p_role: string }
         Returns: undefined
       }
+      _mafia_base_admin: {
+        Args: {
+          p_action: string
+          p_admin: string
+          p_player: string
+          p_value: string
+        }
+        Returns: Json
+      }
+      _mafia_base_state: {
+        Args: { p_admin: string; p_token: string }
+        Returns: Json
+      }
       _mafia_bump: { Args: never; Returns: undefined }
       _mafia_hash: { Args: { t: string }; Returns: string }
       _mafia_is_admin: { Args: { p_admin: string }; Returns: boolean }
@@ -169,6 +263,19 @@ export type Database = {
       }
       mafia_admin_unlock: { Args: { p_code: string }; Returns: Json }
       mafia_join: { Args: { p_name: string; p_token: string }; Returns: Json }
+      mafia_night_action: {
+        Args: { p_round: number; p_target: string; p_token: string }
+        Returns: Json
+      }
+      mafia_night_admin: {
+        Args: {
+          p_action: string
+          p_admin: string
+          p_round: number
+          p_target: string
+        }
+        Returns: Json
+      }
       mafia_set_admin_code: { Args: { p_code: string }; Returns: undefined }
       mafia_state: { Args: { p_admin: string; p_token: string }; Returns: Json }
       mafia_vote: { Args: { p_target: string; p_token: string }; Returns: Json }
