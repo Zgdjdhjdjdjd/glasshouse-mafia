@@ -5,7 +5,7 @@ export const MAX_PLAYERS = 23;
 export function secureRandomInt(max: number): number {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
-  return buf[0] % max;
+  return buf[0]! % max;
 }
 
 /** Returns one role per player, in random order. */
@@ -16,7 +16,7 @@ export function assignRoles(count: number, rand: (max: number) => number = secur
   while (roles.length < count) roles.push("civilian");
   for (let i = roles.length - 1; i > 0; i--) {
     const j = rand(i + 1);
-    [roles[i], roles[j]] = [roles[j], roles[i]];
+    [roles[i], roles[j]] = [roles[j]!, roles[i]!];
   }
   return roles;
 }

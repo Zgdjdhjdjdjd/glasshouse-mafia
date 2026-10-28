@@ -208,7 +208,7 @@ export const adminAction = createServerFn({ method: "POST" })
         if (list.length < MIN_PLAYERS) return { ok: false, error: `Need at least ${MIN_PLAYERS} players.` };
         const roles = assignRoles(list.length);
         for (let i = 0; i < list.length; i++) {
-          await sb.from("players").update({ role: roles[i], alive: true }).eq("id", list[i].id);
+          await sb.from("players").update({ role: roles[i]!, alive: true }).eq("id", list[i]!.id);
         }
         await updateGame({ phase: "playing", voting_open: false, last_result: null, result_used: false, winner: null });
         return { ok: true };
