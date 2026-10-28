@@ -1,4 +1,5 @@
-export const ROLE_INFO: Record<string, { name: string; icon: string; team: string; desc: string }> = {
+type Info = { name: string; icon: string; team: string; desc: string };
+export const ROLE_INFO: Record<"mafia" | "joker" | "detective" | "doctor" | "civilian", Info> & Record<string, Info> = {
   mafia: { name: "Mafia", icon: "🔪", team: "Mafia", desc: "Work secretly with the other Mafia. Win when Mafia equal or outnumber everyone else." },
   joker: { name: "Joker", icon: "🃏", team: "Solo", desc: "Act suspicious. You win if the town eliminates you through a public vote." },
   detective: { name: "Detective", icon: "🔍", team: "Town", desc: "Investigate players to uncover the Mafia. Help the town eliminate all Mafia." },
