@@ -36,6 +36,13 @@
       "when": 1793183652590,
       "tag": "0004_admin_controlled_night_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793183892694,
+      "tag": "0005_restrict_night_table_grants",
+      "breakpoints": true
     }
   ]
 }
