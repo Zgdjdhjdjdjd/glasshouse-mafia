@@ -14,7 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game: {
+        Row: {
+          id: number
+          last_result: Json | null
+          mafia_rule: string
+          phase: string
+          result_used: boolean
+          reveal_roles: boolean
+          version: number
+          vote_round: number
+          voting_open: boolean
+          winner: string | null
+        }
+        Insert: {
+          id?: number
+          last_result?: Json | null
+          mafia_rule?: string
+          phase?: string
+          result_used?: boolean
+          reveal_roles?: boolean
+          version?: number
+          vote_round?: number
+          voting_open?: boolean
+          winner?: string | null
+        }
+        Update: {
+          id?: number
+          last_result?: Json | null
+          mafia_rule?: string
+          phase?: string
+          result_used?: boolean
+          reveal_roles?: boolean
+          version?: number
+          vote_round?: number
+          voting_open?: boolean
+          winner?: string | null
+        }
+        Relationships: []
+      }
+      players: {
+        Row: {
+          alive: boolean
+          id: string
+          joined_at: string
+          kicked: boolean
+          name: string
+          role: string | null
+          token: string
+        }
+        Insert: {
+          alive?: boolean
+          id?: string
+          joined_at?: string
+          kicked?: boolean
+          name: string
+          role?: string | null
+          token: string
+        }
+        Update: {
+          alive?: boolean
+          id?: string
+          joined_at?: string
+          kicked?: boolean
+          name?: string
+          role?: string | null
+          token?: string
+        }
+        Relationships: []
+      }
+      votes: {
+        Row: {
+          round: number
+          target_id: string
+          voter_id: string
+        }
+        Insert: {
+          round: number
+          target_id: string
+          voter_id: string
+        }
+        Update: {
+          round?: number
+          target_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "votes_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "votes_voter_id_fkey"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
