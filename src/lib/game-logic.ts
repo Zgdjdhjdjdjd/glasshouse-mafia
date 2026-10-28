@@ -5,7 +5,7 @@ export const MAX_PLAYERS = 23;
 export function secureRandomInt(max: number): number {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
-  return buf[0]! % max;
+  return (buf[0] ?? 0) % max;
 }
 
 /** Returns one role per player, in random order. */
@@ -16,7 +16,9 @@ export function assignRoles(count: number, rand: (max: number) => number = secur
   while (roles.length < count) roles.push("civilian");
   for (let i = roles.length - 1; i > 0; i--) {
     const j = rand(i + 1);
-    [roles[i], roles[j]] = [roles[j]!, roles[i]!];
+    const current = roles[i];
+    const other = roles[j];
+    if (current && other) [roles[i], roles[j]] = [other, current];
   }
   return roles;
 }
@@ -43,4 +45,13 @@ export function tallyVotes(votes: { target_id: string }[]) {
   const max = Math.max(0, ...Object.values(totals));
   const top = max > 0 ? Object.keys(totals).filter((k) => totals[k] === max) : [];
   return { totals, max, top };
+}
+
+export function resolveNightTarget(victim: string | null, doctorTarget: string | null) {
+  const saved = victim !== null && victim === doctorTarget;
+  return { saved, killed: saved ? null : victim };
+}
+
+export function canSubmitNight(role: Role | null, alive: boolean, open: boolean, alreadySubmitted: boolean) {
+  return alive && open && !alreadySubmitted && (role === "mafia" || role === "doctor" || role === "detective");
 }

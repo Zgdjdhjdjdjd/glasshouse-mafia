@@ -14,3 +14,5 @@
 - players/votes/admin tables have RLS with no policies; only the `game` row is publicly readable and in realtime; clients refetch state when it changes (plus a 4s poll).
 - Admin code is stored only as a sha256 hash (set via service-role-only mafia_set_admin_code); unlocking issues a random session token stored hashed in admin_sessions.
 - src/lib/game-logic.ts holds constants and reference rules with tests; the database functions are the source of truth.
+- Private night actions/results live in locked night tables and SECURITY DEFINER RPCs; a monotonic night round and shared advisory lock serialize submissions, admin transitions, and resolution without host server dependencies.
+- Night controls live in src/components/night-actions.tsx and consume token-scoped state; never expose other players' choices or feedback outside the admin response.
