@@ -320,7 +320,7 @@ function VoteResults({ result }: { result: NonNullable<State["lastResult"]> }) {
         {result.top.length === 0
           ? "No votes were cast."
           : result.top.length === 1
-            ? `Most votes: ${result.top[0].name}`
+            ? `Most votes: ${result.top[0]?.name}`
             : `Tie between ${result.top.map((t) => t.name).join(", ")}`}
       </p>
       <ul className="mt-3 space-y-1 text-sm">
@@ -394,9 +394,9 @@ function AdminDashboard({ state, act }: { state: State; act: Act }) {
           {game.phase === "playing" && state.lastResult.top.length === 1 && !state.lastResult.used && (
             <button
               className="glass-btn glass-btn-danger"
-              onClick={() => confirmAct(`Eliminate ${state.lastResult!.top[0].name} by vote?`, "eliminateVoted")}
+              onClick={() => confirmAct(`Eliminate ${state.lastResult!.top[0]?.name} by vote?`, "eliminateVoted")}
             >
-              Eliminate {state.lastResult.top[0].name} (voted out)
+              Eliminate {state.lastResult.top[0]?.name} (voted out)
             </button>
           )}
         </>
@@ -431,7 +431,7 @@ function AdminDashboard({ state, act }: { state: State; act: Act }) {
             {a.players.map((p) => (
               <tr key={p.id} className="border-t">
                 <td className="py-2">{p.name}</td>
-                <td>{p.role ? `${ROLE_INFO[p.role].icon} ${ROLE_INFO[p.role].name}` : "—"}</td>
+                <td>{p.role ? `${ROLE_INFO[p.role]?.icon} ${ROLE_INFO[p.role]?.name}` : "—"}</td>
                 <td className={p.alive ? "text-success" : "text-destructive"}>{p.alive ? "Alive" : "Eliminated"}</td>
                 <td className="py-2 text-right">
                   <div className="flex justify-end gap-1">
