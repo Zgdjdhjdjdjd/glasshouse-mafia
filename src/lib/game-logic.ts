@@ -1,6 +1,12 @@
-export type Role = "mafia" | "joker" | "detective" | "doctor" | "civilian";
-export const MIN_PLAYERS = 6;
+export type Role = "mafia" | "joker" | "detective" | "doctor" | "grandma" | "civilian";
+export const MIN_PLAYERS = 7;
 export const MAX_PLAYERS = 23;
+export const ADMIN_ROLE_ORDER: Role[] = ["mafia", "joker", "detective", "doctor", "grandma", "civilian"];
+
+export function adminRoleRank(role: string | null) {
+  const rank = ADMIN_ROLE_ORDER.findIndex((entry) => entry === role);
+  return rank < 0 ? ADMIN_ROLE_ORDER.length : rank;
+}
 
 export function secureRandomInt(max: number): number {
   const buf = new Uint32Array(1);
@@ -12,7 +18,7 @@ export function secureRandomInt(max: number): number {
 export function assignRoles(count: number, rand: (max: number) => number = secureRandomInt): Role[] {
   if (count < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players`);
   if (count > MAX_PLAYERS) throw new Error(`Maximum ${MAX_PLAYERS} players`);
-  const roles: Role[] = ["mafia", "mafia", "mafia", "joker", "detective", "doctor"];
+  const roles: Role[] = ["mafia", "mafia", "mafia", "joker", "detective", "doctor", "grandma"];
   while (roles.length < count) roles.push("civilian");
   for (let i = roles.length - 1; i > 0; i--) {
     const j = rand(i + 1);
@@ -47,8 +53,8 @@ export function tallyVotes(votes: { target_id: string }[]) {
   return { totals, max, top };
 }
 
-export function resolveNightTarget(victim: string | null, doctorTarget: string | null) {
-  const saved = victim !== null && victim === doctorTarget;
+export function resolveNightTarget(victim: string | null, doctorTarget: string | null, victimRole?: Role) {
+  const saved = victim !== null && (victim === doctorTarget || victimRole === "grandma");
   return { saved, killed: saved ? null : victim };
 }
 

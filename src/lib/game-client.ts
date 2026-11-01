@@ -33,9 +33,9 @@ export type State = {
   };
   admin: null | {
     nightChoices: { playerId: string; playerName: string; role: string; targetId: string; targetName: string; active: boolean }[];
-    nightOutcome: { victimName: string | null; saved: boolean } | null;
+    nightOutcome: { victimName: string | null; saved: boolean; grandmaRetaliated: boolean; retaliationName: string | null } | null;
     players: { id: string; name: string; role: string | null; alive: boolean }[];
-    counters: Record<"mafia" | "civilian" | "detective" | "doctor" | "joker", number>;
+    counters: Record<"mafia" | "civilian" | "detective" | "doctor" | "joker" | "grandma", number>;
     liveTotals: { id: string; name: string; votes: number }[];
     votesCast: number;
     eligibleVoters: number;
@@ -54,6 +54,7 @@ export const api = {
   vote: (token: string, targetId: string) => rpc<Result>("mafia_vote", { p_token: token, p_target: targetId }),
   nightAction: (token: string, targetId: string, round: number) => rpc<Result>("mafia_night_action", { p_token: token, p_target: targetId, p_round: round }),
   nightAdmin: (adminToken: string, action: string, round: number, targetId?: string) => rpc<Result>("mafia_night_admin", { p_admin: adminToken, p_action: action, p_round: round, p_target: targetId ?? null }),
+  approveNight: (adminToken: string, round: number, targetId?: string, retaliationId?: string) => rpc<Result>("mafia_approve_night", { p_admin: adminToken, p_round: round, p_target: targetId ?? null, p_retaliation: retaliationId ?? null }),
   unlock: (code: string) => rpc<Result>("mafia_admin_unlock", { p_code: code }),
   admin: (adminToken: string, action: string, playerId?: string, value?: string) =>
     rpc<Result>("mafia_admin", { p_admin: adminToken, p_action: action, p_player: playerId ?? null, p_value: value ?? null }),
