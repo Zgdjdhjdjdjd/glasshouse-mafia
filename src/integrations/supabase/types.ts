@@ -137,24 +137,34 @@ export type Database = {
       }
       night_rounds: {
         Row: {
+          retaliation_id: string | null
           round: number
           saved: boolean
           status: string
           victim_id: string | null
         }
         Insert: {
+          retaliation_id?: string | null
           round: number
           saved?: boolean
           status: string
           victim_id?: string | null
         }
         Update: {
+          retaliation_id?: string | null
           round?: number
           saved?: boolean
           status?: string
           victim_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "night_rounds_retaliation_id_fkey"
+            columns: ["retaliation_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "night_rounds_victim_id_fkey"
             columns: ["victim_id"]
@@ -262,6 +272,15 @@ export type Database = {
         Returns: Json
       }
       mafia_admin_unlock: { Args: { p_code: string }; Returns: Json }
+      mafia_approve_night: {
+        Args: {
+          p_admin: string
+          p_retaliation: string
+          p_round: number
+          p_target: string
+        }
+        Returns: Json
+      }
       mafia_join: { Args: { p_name: string; p_token: string }; Returns: Json }
       mafia_night_action: {
         Args: { p_round: number; p_target: string; p_token: string }
