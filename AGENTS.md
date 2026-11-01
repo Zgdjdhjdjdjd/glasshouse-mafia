@@ -16,3 +16,5 @@
 - src/lib/game-logic.ts holds constants and reference rules with tests; the database functions are the source of truth.
 - Private night actions/results live in locked night tables and SECURITY DEFINER RPCs; a monotonic night round and shared advisory lock serialize submissions, admin transitions, and resolution without host server dependencies.
 - Night controls live in src/components/night-actions.tsx and consume token-scoped state; never expose other players' choices or feedback outside the admin response.
+- Night approval uses mafia_approve_night to validate retaliation before atomically resolving it; legacy approval cannot bypass this validation.
+- Rejoining after a kick creates a new player identity and retires the old token so old roles, votes, and night actions never reactivate.

@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, gameDb, type State } from "@/lib/game-client";
 import { ROLE_INFO, WINNER_TEXT } from "@/lib/roles";
-import { MAX_PLAYERS, MIN_PLAYERS } from "@/lib/game-logic";
+import { MAX_PLAYERS, MIN_PLAYERS, ADMIN_ROLE_ORDER, adminRoleRank } from "@/lib/game-logic";
+import { Button } from "@/components/ui/button";
 import { AdminNight, PlayerNight, type NightAct } from "@/components/night-actions";
 
 export const Route = createFileRoute("/")({
@@ -94,13 +95,13 @@ function Game() {
   const me = state?.me;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 px-4 py-6">
+    <main className={`mx-auto flex min-h-screen max-w-3xl flex-col gap-4 px-4 py-6 ${state?.game.votingOpen ? "voting-screen" : ""}`}>
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Mafia</h1>
         {admin ? (
-          <button className="glass-btn text-sm" onClick={() => setShowAdmin((v) => !v)}>
+          <Button variant="ghost" className="glass-btn text-sm" onClick={() => setShowAdmin((v) => !v)}>
             {showAdmin ? "Player view" : "Admin dashboard"}
-          </button>
+          </Button>
         ) : (
           <AdminUnlock
             onUnlock={async (code) => {
@@ -123,10 +124,10 @@ function Game() {
       {!state ? (
         <div className="glass p-6 text-center text-muted-foreground">{connErr ? "Can't reach the game server. Retrying…" : "Connecting…"}</div>
       ) : admin && showAdmin ? (
-        <AdminDashboard state={state} act={(action, playerId, value) => adminToken ? run(() => api.admin(adminToken, action, playerId, value)) : undefined} nightAct={(action, targetId) => adminToken ? run(() => api.nightAdmin(adminToken, action, state.night.round, targetId)) : undefined} />
+        <AdminDashboard state={state} act={(action, playerId, value) => adminToken ? run(() => api.admin(adminToken, action, playerId, value)) : undefined} nightAct={(action, targetId, retaliationId) => adminToken ? run(() => action === "resolveNight" ? api.approveNight(adminToken, state.night.round, targetId, retaliationId) : api.nightAdmin(adminToken, action, state.night.round, targetId)) : undefined} />
       ) : !me || me.kicked ? (
         me?.kicked ? (
-          <div className="glass p-6 text-center">You were removed from this room by the admin.</div>
+          <><p className="text-center text-sm text-muted-foreground">You were removed from the room. You may join again.</p><JoinScreen count={state.players.length} onJoin={(name) => token ? run(() => api.join(token, name)) : undefined} /></>
         ) : admin ? (
           <div className="glass p-6 text-center text-muted-foreground">You're the admin. Open the dashboard to manage the game.</div>
         ) : (
@@ -145,9 +146,9 @@ function AdminUnlock({ onUnlock }: { onUnlock: (code: string) => Promise<string 
   const [msg, setMsg] = useState("");
   if (!open)
     return (
-      <button className="glass-btn text-sm" onClick={() => setOpen(true)}>
+      <Button variant="ghost" className="glass-btn text-sm" onClick={() => setOpen(true)}>
         Admin
-      </button>
+      </Button>
     );
   return (
     <form
@@ -167,7 +168,7 @@ function AdminUnlock({ onUnlock }: { onUnlock: (code: string) => Promise<string 
         placeholder={msg || "Admin code"}
         className="w-32 rounded-full border border-input bg-muted px-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
       />
-      <button className="glass-btn glass-btn-primary text-sm">Unlock</button>
+      <Button variant="ghost" className="glass-btn glass-btn-primary text-sm">Unlock</Button>
     </form>
   );
 }
@@ -192,9 +193,9 @@ function JoinScreen({ count, onJoin }: { count: number; onJoin: (name: string) =
           placeholder="Your display name"
           className="rounded-full border border-input bg-muted px-5 py-3 outline-none placeholder:text-muted-foreground focus:border-ring"
         />
-        <button className="glass-btn glass-btn-primary" disabled={!name.trim() || count >= MAX_PLAYERS}>
+        <Button variant="ghost" className="glass-btn glass-btn-primary" disabled={!name.trim() || count >= MAX_PLAYERS}>
           Join
-        </button>
+        </Button>
       </form>
     </section>
   );
@@ -254,7 +255,7 @@ function PlayerView({ state, onVote, onNight }: { state: State; onVote: (id: str
       )}
 
       {game.votingOpen && game.phase === "playing" && (
-        <section className="glass p-5">
+        <section className="glass voting-panel p-5">
           <h2 className="font-semibold">Vote — round {game.voteRound}</h2>
           {!me.alive || !me.role ? (
             <p className="mt-2 text-sm text-muted-foreground">You can't vote this round.</p>
@@ -264,18 +265,18 @@ function PlayerView({ state, onVote, onNight }: { state: State; onVote: (id: str
             <>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {state.players.filter((p) => p.alive && p.id !== me.id).map((p) => (
-                  <button
+                  <Button variant="ghost"
                     key={p.id}
                     onClick={() => setChoice(p.id)}
                     className={`glass-btn text-sm ${choice === p.id ? "glass-btn-primary" : ""}`}
                   >
                     {p.name}
-                  </button>
+                  </Button>
                 ))}
               </div>
-              <button className="glass-btn glass-btn-primary mt-4 w-full" disabled={!choice} onClick={() => choice && onVote(choice)}>
+              <Button variant="ghost" className="glass-btn glass-btn-primary mt-4 w-full" disabled={!choice} onClick={() => choice && onVote(choice)}>
                 Submit vote
-              </button>
+              </Button>
             </>
           )}
         </section>
@@ -289,9 +290,9 @@ function PlayerView({ state, onVote, onNight }: { state: State; onVote: (id: str
         {!me.role ? (
           <p className="text-muted-foreground">A game is in progress. You'll join the next one.</p>
         ) : !revealed ? (
-          <button className="glass-btn glass-btn-primary" onClick={() => setRevealed(true)}>
+          <Button variant="ghost" className="glass-btn glass-btn-primary" onClick={() => setRevealed(true)}>
             REVEAL MY CARD
-          </button>
+          </Button>
         ) : (
           info && (
             <div className="fade-in">
@@ -300,7 +301,7 @@ function PlayerView({ state, onVote, onNight }: { state: State; onVote: (id: str
               <p className="text-sm text-muted-foreground">Team: {info.team}</p>
               <p className="mx-auto mt-3 max-w-sm text-sm">{info.desc}</p>
               {!me.alive && <p className="mt-3 text-sm text-destructive">You have been eliminated.</p>}
-              <button className="glass-btn mt-4 text-sm" onClick={() => setRevealed(false)}>Hide card</button>
+              <Button variant="ghost" className="glass-btn mt-4 text-sm" onClick={() => setRevealed(false)}>Hide card</Button>
             </div>
           )
         )}
@@ -352,19 +353,19 @@ function AdminDashboard({ state, act, nightAct }: { state: State; act: Act; nigh
           {game.phase === "lobby" ? "Lobby" : game.phase === "playing" ? (game.votingOpen ? "Voting open" : "Game in progress") : "Game over"} · {a.players.length}/{MAX_PLAYERS}
         </span>
         {game.phase === "lobby" && (
-          <button className="glass-btn glass-btn-primary" disabled={a.players.length < MIN_PLAYERS} onClick={() => act("start")}>
+          <Button variant="ghost" className="glass-btn glass-btn-primary" disabled={a.players.length < MIN_PLAYERS} onClick={() => act("start")}>
             START GAME
-          </button>
+          </Button>
         )}
         {game.phase === "playing" && !game.votingOpen && (
-          <button className="glass-btn glass-btn-primary" disabled={nightPending} onClick={() => act("startVote")}>START VOTE</button>
+          <Button variant="ghost" className="glass-btn glass-btn-primary" disabled={nightPending} onClick={() => act("startVote")}>START VOTE</Button>
         )}
         {game.votingOpen && (
-          <button className="glass-btn glass-btn-primary" onClick={() => act("endVote")}>END VOTE</button>
+          <Button variant="ghost" className="glass-btn glass-btn-primary" onClick={() => act("endVote")}>END VOTE</Button>
         )}
-        <button className="glass-btn glass-btn-danger" onClick={() => confirmAct("Reset the game? All roles, votes and eliminations will be cleared.", "reset")}>
+        <Button variant="ghost" className="glass-btn glass-btn-danger" onClick={() => confirmAct("Reset the game? All roles, votes and eliminations will be cleared.", "reset")}>
           RESET GAME
-        </button>
+        </Button>
       </section>
 
       {game.phase === "lobby" && a.players.length < MIN_PLAYERS && (
@@ -378,7 +379,7 @@ function AdminDashboard({ state, act, nightAct }: { state: State; act: Act; nigh
       <AdminNight state={state} act={nightAct} />
 
       {game.votingOpen && (
-        <section className="glass p-5">
+        <section className="glass voting-panel p-5">
           <h2 className="font-semibold">Live votes — round {game.voteRound}</h2>
           <p className="text-sm text-muted-foreground">{a.votesCast} of {a.eligibleVoters} voted</p>
           <ul className="mt-3 space-y-1 text-sm">
@@ -396,13 +397,13 @@ function AdminDashboard({ state, act, nightAct }: { state: State; act: Act; nigh
         <>
           <VoteResults result={state.lastResult} />
           {game.phase === "playing" && state.lastResult.top.length === 1 && !state.lastResult.used && (
-            <button
+            <Button variant="ghost"
               className="glass-btn glass-btn-danger"
               disabled={nightPending}
               onClick={() => confirmAct(`Eliminate ${state.lastResult?.top[0]?.name} by vote?`, "eliminateVoted")}
             >
               Eliminate {state.lastResult.top[0]?.name} (voted out)
-            </button>
+            </Button>
           )}
         </>
       )}
@@ -410,8 +411,8 @@ function AdminDashboard({ state, act, nightAct }: { state: State; act: Act; nigh
       {game.phase !== "lobby" && (
         <section className="glass p-5">
           <h2 className="mb-3 font-semibold">Alive by role</h2>
-          <div className="grid grid-cols-5 gap-2 text-center">
-            {(["mafia", "civilian", "detective", "doctor", "joker"] as const).map((r) => (
+          <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
+            {ADMIN_ROLE_ORDER.map((r) => (
               <div key={r} className="rounded-xl bg-muted py-2">
                 <div className="text-xl">{ROLE_INFO[r].icon}</div>
                 <div className="text-lg font-semibold">{a.counters[r]}</div>
@@ -433,7 +434,7 @@ function AdminDashboard({ state, act, nightAct }: { state: State; act: Act; nigh
             </tr>
           </thead>
           <tbody>
-            {a.players.map((p) => (
+            {[...a.players].sort((x, y) => adminRoleRank(x.role) - adminRoleRank(y.role)).map((p) => (
               <tr key={p.id} className="border-t">
                 <td className="py-2">{p.name}</td>
                 <td>{p.role ? `${ROLE_INFO[p.role]?.icon} ${ROLE_INFO[p.role]?.name}` : "—"}</td>
@@ -441,13 +442,13 @@ function AdminDashboard({ state, act, nightAct }: { state: State; act: Act; nigh
                 <td className="py-2 text-right">
                   <div className="flex justify-end gap-1">
                     {game.phase === "playing" && p.alive && p.role && (
-                      <button className="glass-btn px-3 py-1 text-xs" disabled={nightPending} onClick={() => confirmAct(`Eliminate ${p.name}?`, "eliminate", p.id)}>
+                      <Button variant="ghost" className="glass-btn px-3 py-1 text-xs" disabled={nightPending} onClick={() => confirmAct(`Eliminate ${p.name}?`, "eliminate", p.id)}>
                         Eliminate
-                      </button>
+                      </Button>
                     )}
-                    <button className="glass-btn glass-btn-danger px-3 py-1 text-xs" onClick={() => confirmAct(`Kick ${p.name} from the room?`, "kick", p.id)}>
+                    <Button variant="ghost" className="glass-btn glass-btn-danger px-3 py-1 text-xs" onClick={() => confirmAct(`Kick ${p.name} from the room?`, "kick", p.id)}>
                       KICK PLAYER
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>

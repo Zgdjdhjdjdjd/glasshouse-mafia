@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { State } from "@/lib/game-client";
 import { ROLE_INFO } from "@/lib/roles";
 
-export type NightAct = (action: "startNight" | "closeNight" | "reopenNight" | "cancelNight" | "resolveNight", targetId?: string) => void;
+export type NightAct = (action: "startNight" | "closeNight" | "reopenNight" | "cancelNight" | "resolveNight", targetId?: string, retaliationId?: string) => void;
 
 export function PlayerNight({ state, submit }: { state: State; submit: (id: string) => void }) {
   const [choice, setChoice] = useState("");
@@ -44,12 +44,16 @@ export function PlayerNight({ state, submit }: { state: State; submit: (id: stri
 
 export function AdminNight({ state, act }: { state: State; act: NightAct }) {
   const [victim, setVictim] = useState("");
-  useEffect(() => setVictim(""), [state.night.round]);
+  const [retaliation, setRetaliation] = useState("");
+  useEffect(() => { setVictim(""); setRetaliation(""); }, [state.night.round]);
   const admin = state.admin;
   if (!admin || state.game.phase !== "playing") return null;
   const { night } = state;
   const pending = night.status === "open" || night.status === "closed";
   const outcome = admin.nightOutcome;
+  const grandmaTarget = admin.players.find((player) => player.id === victim)?.role === "grandma";
+  const attackingIds = admin.nightChoices.filter((entry) => entry.active && entry.role === "mafia" && entry.targetId === victim).map((entry) => entry.playerId);
+  const attackers = admin.players.filter((player) => player.alive && player.role === "mafia" && (!attackingIds.length || attackingIds.includes(player.id)));
   return (
     <section className="glass space-y-4 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -65,16 +69,23 @@ export function AdminNight({ state, act }: { state: State; act: NightAct }) {
         </ul>
         {night.open ? <Button className="glass-btn glass-btn-primary w-full" onClick={() => act("closeNight")}>CLOSE NIGHT CHOICES</Button> : <>
           <label className="block text-sm" htmlFor="admin-victim">Final Mafia target</label>
-          <select id="admin-victim" className="w-full rounded-lg border border-input bg-popover px-3 py-3 text-sm" value={victim} onChange={(event) => setVictim(event.target.value)}>
+          <select id="admin-victim" className="w-full rounded-lg border border-input bg-popover px-3 py-3 text-sm" value={victim} onChange={(event) => { setVictim(event.target.value); setRetaliation(""); }}>
             <option value="">No kill</option>
             {admin.players.filter((player) => player.alive && player.role).map((player) => <option key={player.id} value={player.id}>{player.name}</option>)}
           </select>
-          <Button className="glass-btn glass-btn-primary w-full" onClick={() => { const name = admin.players.find((player) => player.id === victim)?.name; if (window.confirm(name ? `Approve attack on ${name}, apply Doctor protection, and release private results?` : "Approve no kill and release private results?")) act("resolveNight", victim || undefined); }}>APPROVE NIGHT</Button>
+          {grandmaTarget && <>
+            <label className="block text-sm" htmlFor="grandma-attacker">Grandma survives · Mafia to shoot</label>
+            <select id="grandma-attacker" className="w-full rounded-lg border border-input bg-popover px-3 py-3 text-sm" value={retaliation} onChange={(event) => setRetaliation(event.target.value)}>
+              <option value="">Select attacking Mafia</option>
+              {attackers.map((player) => <option key={player.id} value={player.id}>{player.name}</option>)}
+            </select>
+          </>}
+          <Button className="glass-btn glass-btn-primary w-full" disabled={grandmaTarget && !attackers.some((player) => player.id === retaliation)} onClick={() => { const name = admin.players.find((player) => player.id === victim)?.name; if (window.confirm(grandmaTarget ? `Approve Grandma surviving and shooting ${admin.players.find((player) => player.id === retaliation)?.name}?` : name ? `Approve attack on ${name}, apply Doctor protection, and release private results?` : "Approve no kill and release private results?")) act("resolveNight", victim || undefined, grandmaTarget ? retaliation : undefined); }}>APPROVE NIGHT</Button>
           <Button variant="secondary" className="glass-btn w-full" onClick={() => act("reopenNight")}>Reopen choices</Button>
         </>}
         <Button variant="ghost" className="glass-btn glass-btn-danger w-full" onClick={() => { if (window.confirm("Cancel this night without an attack or private results?")) act("cancelNight"); }}>Cancel night</Button>
       </>}
-      {outcome && <p className="text-sm">{!outcome.victimName ? "Night approved: no kill." : outcome.saved ? `${outcome.victimName} was saved by the Doctor.` : `${outcome.victimName} was killed.`}</p>}
+      {outcome && <p className="text-sm">{!outcome.victimName ? "Night approved: no kill." : outcome.grandmaRetaliated ? `${outcome.victimName} survived and shot ${outcome.retaliationName}.` : outcome.saved ? `${outcome.victimName} was saved by the Doctor.` : `${outcome.victimName} was killed.`}</p>}
     </section>
   );
 }
